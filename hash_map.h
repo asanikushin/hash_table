@@ -2,6 +2,7 @@
 #include <list>
 #include <initializer_list>
 #include <iostream>
+#include <stdexcept>
 
 template<class KeyType, class ValueType, class Hash = std::hash<KeyType> >
 class HashMap {
@@ -16,7 +17,7 @@ private:
     std::vector<typename MyList::iterator> baskets;
 
     void rebuild() {
-        HashMap tmp(hasher);
+        HashMap tmp(alloc * 3, hasher);
         tmp = *this;
         *this = tmp;
     }
@@ -86,7 +87,7 @@ public:
         return data.end();
     }
 
-    const_iterator find(KeyType key) const {
+    const_iterator find(const KeyType &key) const {
         std::size_t pos = hasher(key) % alloc;
         iterator cur = baskets[pos];
         while (check(cur, pos) && !(cur->first == key)) {
@@ -99,7 +100,7 @@ public:
         }
     }
 
-    iterator find(KeyType key) {
+    iterator find(const KeyType &key) {
         std::size_t pos = hasher(key) % alloc;
         iterator cur = baskets[pos];
         while (check(cur, pos) && !(cur->first == key)) {
@@ -112,7 +113,7 @@ public:
         }
     }
 
-    void insert(std::pair<KeyType, ValueType> elem) {
+    void insert(const std::pair<KeyType, ValueType> &elem) {
         if (find(elem.first) == end()) {
             std::size_t pos = hasher(elem.first) % alloc;
             iterator cur = baskets[pos];
@@ -124,7 +125,7 @@ public:
         }
     }
 
-    void erase(KeyType key) {
+    void erase(const KeyType &key) {
         iterator cur = find(key);
         if (cur != end()) {
             std::size_t pos = hasher(key) % alloc;
@@ -140,16 +141,16 @@ public:
         }
     }
 
-    ValueType &operator[](KeyType key) {
+    ValueType &operator[](const KeyType &key) {
         insert({key, ValueType()});
         iterator cur = find(key);
         return cur->second;
     }
 
-    const ValueType &at(KeyType key) const {
+    const ValueType &at(const KeyType &key) const {
         const_iterator cur = find(key);
         if (cur == end()) {
-            std::__throw_out_of_range("");
+            throw std::out_of_range("Meow??");
         }
         return cur->second;
     }
@@ -180,11 +181,9 @@ public:
             return *this;
         }
         clear();
-        alloc = std::min(other.alloc * 2 + 1, other.sz * 6);
-        if (alloc == 0)
-            alloc = 2;
+        alloc = std::max(alloc, other.alloc);
         baskets.assign(alloc, data.end());
-        for (auto x : other) {
+        for (const auto &x : other) {
             insert(x);
         }
         return *this;
